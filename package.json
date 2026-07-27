@@ -18,7 +18,8 @@
     "vite": "vite",
     "typecheck": "react-router typegen && tsc --noEmit",
     "worker": "tsx worker/index.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:demo": "tsx --env-file=.env scripts/seed-demo.ts"
   },
   "type": "module",
   "engines": {
