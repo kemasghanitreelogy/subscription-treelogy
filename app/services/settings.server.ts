@@ -56,6 +56,21 @@ export async function saveSettings(db: pg.Pool, settings: AppSettings): Promise<
   );
 }
 
+/** URL halaman manajemen langganan di akun pelanggan (disalin dari editor). */
+export async function getManagementUrl(db: pg.Pool): Promise<string | null> {
+  const { rows } = await db.query("select value from app_settings where key = 'management_url'");
+  return rows.length ? (rows[0].value as { url: string }).url : null;
+}
+
+export async function saveManagementUrl(db: pg.Pool, url: string): Promise<void> {
+  if (!/^https:\/\/[^\s]+$/.test(url)) throw new Error("URL harus diawali https://");
+  await db.query(
+    `insert into app_settings (key, value) values ('management_url', $1)
+     on conflict (key) do update set value = excluded.value, updated_at = now()`,
+    [JSON.stringify({ url })],
+  );
+}
+
 /** Harga unit setelah diskon plan — integer rupiah, dibulatkan ke bawah. */
 export function discountedUnitIdr(baseUnitIdr: number, plan: PlanConfig): number {
   const v = Math.floor((baseUnitIdr * (100 - plan.discountPct)) / 100);
