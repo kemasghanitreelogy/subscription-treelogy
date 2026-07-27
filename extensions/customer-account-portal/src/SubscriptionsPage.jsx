@@ -8,8 +8,19 @@ import { useCallback, useEffect, useState } from "preact/hooks";
 
 const APP_URL = "https://treelogy-subscriptions.fly.dev";
 
-export default async () => {
-  render(<SubscriptionsPage />, document.body);
+export default () => {
+  try {
+    render(<SubscriptionsPage />, document.body);
+  } catch (err) {
+    render(
+      <s-page heading="Langganan">
+        <s-section>
+          <s-text>Halaman tidak bisa dimuat. Coba muat ulang. ({String(err)})</s-text>
+        </s-section>
+      </s-page>,
+      document.body,
+    );
+  }
 };
 
 function SubscriptionsPage() {
@@ -18,16 +29,33 @@ function SubscriptionsPage() {
   const [busyId, setBusyId] = useState(null);
 
   const load = useCallback(async () => {
+    console.log("[treelogy-sub] mulai memuat");
+    // Jangan pernah menggantung diam-diam — apa pun yang terjadi, UI berubah.
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout 10 detik — coba muat ulang")), 10000),
+    );
     try {
-      const token = await shopify.sessionToken.get();
-      const res = await fetch(`${APP_URL}/api/customer/subscriptions`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // Di preview editor tidak ada sesi customer — jangan sampai melempar keras.
+      if (typeof shopify === "undefined" || !shopify?.sessionToken?.get) {
+        console.log("[treelogy-sub] shopify.sessionToken tidak tersedia (preview?)");
+        setState({ loading: false, subs: [], error: null });
+        return;
+      }
+      const token = await Promise.race([shopify.sessionToken.get(), timeout]);
+      console.log("[treelogy-sub] token ok, fetch API…");
+      const res = await Promise.race([
+        fetch(`${APP_URL}/api/customer/subscriptions`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        timeout,
+      ]);
+      console.log("[treelogy-sub] fetch status", res.status);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setState({ loading: false, subs: data.subscriptions, error: null });
     } catch (err) {
-      setState({ loading: false, subs: [], error: String(err) });
+      console.error("[treelogy-sub] gagal:", err);
+      setState({ loading: false, subs: [], error: String(err?.message ?? err) });
     }
   }, []);
 
@@ -66,7 +94,10 @@ function SubscriptionsPage() {
     return (
       <s-page heading="Langganan">
         <s-section>
-          <s-spinner accessibilityLabel="Memuat langganan" />
+          <s-stack direction="inline" gap="small-200" alignItems="center">
+            <s-spinner accessibilityLabel="Memuat langganan" />
+            <s-text>Memuat langganan…</s-text>
+          </s-stack>
         </s-section>
       </s-page>
     );
