@@ -8,6 +8,20 @@ import { useCallback, useEffect, useState } from "preact/hooks";
 
 const APP_URL = "https://treelogy-subscriptions.fly.dev";
 
+/**
+ * Jangan pernah menggantung diam-diam — paksa error setelah 10 detik.
+ * @template T
+ * @param {Promise<T>} promise
+ * @returns {Promise<T>}
+ */
+function withTimeout(promise) {
+  /** @type {Promise<never>} */
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("Timeout 10 detik — coba muat ulang")), 10000),
+  );
+  return Promise.race([promise, timeout]);
+}
+
 export default () => {
   try {
     render(<SubscriptionsPage />, document.body);
@@ -30,10 +44,6 @@ function SubscriptionsPage() {
 
   const load = useCallback(async () => {
     console.log("[treelogy-sub] mulai memuat");
-    // Jangan pernah menggantung diam-diam — apa pun yang terjadi, UI berubah.
-    const timeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Timeout 10 detik — coba muat ulang")), 10000),
-    );
     try {
       // Di preview editor tidak ada sesi customer — jangan sampai melempar keras.
       if (typeof shopify === "undefined" || !shopify?.sessionToken?.get) {
@@ -41,21 +51,20 @@ function SubscriptionsPage() {
         setState({ loading: false, subs: [], error: null });
         return;
       }
-      const token = await Promise.race([shopify.sessionToken.get(), timeout]);
+      const token = await withTimeout(shopify.sessionToken.get());
       console.log("[treelogy-sub] token ok, fetch API…");
-      const res = await Promise.race([
+      const res = await withTimeout(
         fetch(`${APP_URL}/api/customer/subscriptions`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        timeout,
-      ]);
+      );
       console.log("[treelogy-sub] fetch status", res.status);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setState({ loading: false, subs: data.subscriptions, error: null });
     } catch (err) {
       console.error("[treelogy-sub] gagal:", err);
-      setState({ loading: false, subs: [], error: String(err?.message ?? err) });
+      setState({ loading: false, subs: [], error: String(err) });
     }
   }, []);
 
@@ -84,7 +93,7 @@ function SubscriptionsPage() {
       });
       await load();
     } catch (err) {
-      setNotice({ tone: "critical", text: String(err.message || err) });
+      setNotice({ tone: "critical", text: String(err) });
     } finally {
       setBusyId(null);
     }
@@ -141,12 +150,13 @@ function SubscriptionsPage() {
           <s-stack direction="block" gap="base">
             <s-stack direction="inline" gap="small-200" alignItems="center">
               <s-heading>{sub.productTitle}</s-heading>
+              {/* 2025-10: tone badge sah hanya critical|auto|neutral (bukan success/warning) */}
               <s-badge
                 tone={
                   sub.status === "active"
-                    ? "success"
+                    ? "auto"
                     : sub.status === "dunning"
-                      ? "warning"
+                      ? "critical"
                       : "neutral"
                 }
               >
