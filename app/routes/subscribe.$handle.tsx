@@ -5,22 +5,24 @@ import { useFetcher, useLoaderData } from "react-router";
 import { getProductByHandle } from "../services/shopify-order.server";
 import { getSettings } from "../services/settings.server";
 import { pooledDb } from "../db/client.server";
+import { assertSubscribeAccess } from "../services/launch-gate.server";
 
 const CONSENT_TEXT =
   "Saya menyetujui pendebetan otomatis sesuai frekuensi yang saya pilih sampai saya menghentikannya. " +
   "Pengingat dikirim 3 hari sebelum setiap tagihan. Saya bisa lewati, jeda, atau batalkan kapan saja lewat link di email/WA.";
 
-export const loader = async ({ params }: LoaderFunctionArgs) => {
+export const loader = async ({ request, params }: LoaderFunctionArgs) => {
+  const previewKey = assertSubscribeAccess(request); // pra-launch: 404 untuk publik
   const product = await getProductByHandle(params.handle!);
   if (!product) throw new Response("Produk tidak ditemukan", { status: 404 });
   const settings = await getSettings(pooledDb());
-  return { product, plans: settings.plans.filter((p) => p.enabled) };
+  return { product, plans: settings.plans.filter((p) => p.enabled), previewKey };
 };
 
 const rupiah = (n: number) => `Rp${Number(n).toLocaleString("id-ID")}`;
 
 export default function Subscribe() {
-  const { product, plans } = useLoaderData<typeof loader>();
+  const { product, plans, previewKey } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<{ paymentUrl?: string; error?: string }>();
   const variants = product.variants.edges.map((e: { node: { id: string; title: string; price: string; availableForSale: boolean } }) => e.node);
 
@@ -33,6 +35,7 @@ export default function Subscribe() {
       <h1>Langganan {product.title}</h1>
       <fetcher.Form method="post" action="/api/sub/create" style={{ display: "grid", gap: 12 }}>
         <input type="hidden" name="consentText" value={CONSENT_TEXT} />
+        {previewKey && <input type="hidden" name="previewKey" value={previewKey} />}
 
         <label>
           Varian

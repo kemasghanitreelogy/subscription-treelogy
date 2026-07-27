@@ -9,6 +9,7 @@ import { createPaymentSession } from "../services/xendit.server";
 import { findCustomerGidByEmail, getVariant } from "../services/shopify-order.server";
 import { logEvent } from "../services/subscription-lifecycle.server";
 import { discountedUnitIdr, getSettings } from "../services/settings.server";
+import { assertSubscribeAccessForm } from "../services/launch-gate.server";
 
 const ALLOWED_METHODS = new Set(["card", "ovo", "dana", "gopay", "shopeepay"]);
 
@@ -16,6 +17,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (request.method !== "POST") return Response.json({ error: "method" }, { status: 405 });
 
   const form = await request.formData();
+  assertSubscribeAccessForm(form); // pra-launch: 404 untuk publik
   const variantGid = String(form.get("variantGid") ?? "");
   const quantity = Number(form.get("quantity") ?? 1);
   const frequencyDays = Number(form.get("frequencyDays") ?? 0);
