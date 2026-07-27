@@ -9,8 +9,11 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json* ./
 COPY extensions/customer-account-portal/package.json ./extensions/customer-account-portal/
 
+# `npm install`, BUKAN `npm ci`: npm 11 di macOS memangkas dep wasm-fallback
+# (@emnapi/*) milik optional-dep per-platform dari lockfile, sehingga sync-check
+# `npm ci` di Linux selalu gagal. `npm install` tetap menghormati lockfile.
 # Dev deps ikut ter-install karena build (vite) & worker (tsx) membutuhkannya.
-RUN npm ci && npm cache clean --force
+RUN npm install --no-audit --no-fund && npm cache clean --force
 
 COPY . .
 

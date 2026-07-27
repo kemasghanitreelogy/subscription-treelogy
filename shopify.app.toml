@@ -2,7 +2,7 @@
 
 client_id = "bbd72d6850fa27b506268b9c14f31302"
 name = "Treelogy Subscriptions"
-application_url = "https://shopify.dev/apps/default-app-home"
+application_url = "https://treelogy-subscriptions.fly.dev"
 embedded = true
 
 [access_scopes]
@@ -19,7 +19,7 @@ api_version = "2026-10"
   compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
 
 [auth]
-redirect_urls = [ "https://shopify.dev/apps/default-app-home/api/auth" ]
+redirect_urls = [ "https://treelogy-subscriptions.fly.dev/auth" ]
 
 [build]
 automatically_update_urls_on_dev = true

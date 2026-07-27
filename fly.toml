@@ -1,37 +1,36 @@
-# Deploy Fly.io — web/worker split (STRUCTURE.md §3).
-app            = "treelogy-subscriptions"
-primary_region = "sin"                  # dekat Xendit & pelanggan ID — tidak bisa diubah belakangan
+# fly.toml app configuration file generated for treelogy-subscriptions on 2026-07-27T11:32:17+08:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'treelogy-subscriptions'
+primary_region = 'sin'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
 
 [processes]
-  web    = "npm run docker-start"
-  worker = "npm run worker"
+  web = 'npm run docker-start'
+  worker = 'npm run worker'
 
 [http_service]
-  internal_port        = 3000
-  force_https          = true
-  processes            = ["web"]        # worker tidak menerima traffic
-  auto_start_machines  = true
-  # "off", bukan "suspend": suspend punya masalah clock-skew — hal terakhir yang
-  # kamu mau di penjadwal penagihan. Webhook juga tidak sabar cold start.
-  auto_stop_machines   = "off"
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'off'
+  auto_start_machines = true
   min_machines_running = 1
+  processes = ['web']
 
   [http_service.concurrency]
-    type       = "requests"
+    type = 'requests'
     soft_limit = 200
 
 [[vm]]
-  processes = ["web"]
-  size      = "shared-cpu-1x"
-  memory    = "512mb"
+  size = 'shared-cpu-1x'
+  memory = '512mb'
+  processes = ['web']
 
 [[vm]]
-  processes = ["worker"]
-  size      = "shared-cpu-1x"
-  memory    = "512mb"
-
-# Skala: fly scale count web=2 worker=1
-# Worker JANGAN lebih dari 1 sampai FOR UPDATE SKIP LOCKED terbukti di staging.
+  size = 'shared-cpu-1x'
+  memory = '512mb'
+  processes = ['worker']
