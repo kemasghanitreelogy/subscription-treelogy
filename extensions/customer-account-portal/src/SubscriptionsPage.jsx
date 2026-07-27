@@ -22,18 +22,36 @@ function withTimeout(promise) {
   return Promise.race([promise, timeout]);
 }
 
-export default () => {
+console.log("[treelogy-sub] modul dievaluasi (v11)");
+
+// Probe bedah: log di sekeliling SETIAP langkah supaya titik gagal terlihat.
+export default async () => {
   try {
-    render(<SubscriptionsPage />, document.body);
-  } catch (err) {
+    console.log(
+      "[treelogy-sub] fase1: typeof document =", typeof document,
+      "| body ada =", typeof document !== "undefined" && Boolean(document.body),
+    );
     render(
       <s-page heading="Langganan">
         <s-section>
-          <s-text>Halaman tidak bisa dimuat. Coba muat ulang. ({String(err)})</s-text>
+          <s-text>Menyiapkan… (v11)</s-text>
         </s-section>
       </s-page>,
       document.body,
     );
+    console.log("[treelogy-sub] fase1 render SELESAI — body children:",
+      document.body?.children?.length);
+    setTimeout(() => {
+      console.log("[treelogy-sub] fase2 mulai");
+      try {
+        render(<SubscriptionsPage />, document.body);
+        console.log("[treelogy-sub] fase2 render SELESAI");
+      } catch (err) {
+        console.error("[treelogy-sub] fase2 ERROR:", err);
+      }
+    }, 300);
+  } catch (err) {
+    console.error("[treelogy-sub] fase1 ERROR:", err);
   }
 };
 
