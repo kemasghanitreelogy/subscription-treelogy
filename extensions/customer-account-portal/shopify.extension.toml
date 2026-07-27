@@ -1,0 +1,18 @@
+# Halaman "Langganan" di area akun pelanggan (new customer accounts).
+# Target penuh + item menu sendiri: customer-account.page.render (§6.4).
+# uid diisi otomatis oleh `shopify app deploy` pertama.
+api_version = "2025-10"
+
+[[extensions]]
+type = "ui_extension"
+name = "Treelogy Subscriptions"
+handle = "treelogy-subscriptions-portal"
+uid = "2ca7dab4-181a-97ca-a6b6-033d64a6b18c44ee21b5"
+
+  [[extensions.targeting]]
+  module = "./src/SubscriptionsPage.jsx"
+  target = "customer-account.page.render"
+
+  [extensions.capabilities]
+  # fetch ke backend app (sub.treelogy.com) dengan session token
+  network_access = true

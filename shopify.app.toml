@@ -1,0 +1,25 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "bbd72d6850fa27b506268b9c14f31302"
+name = "Treelogy Subscriptions"
+application_url = "https://shopify.dev/apps/default-app-home"
+embedded = true
+
+[access_scopes]
+# ADR-01: write_own_subscription_contracts SENGAJA tidak ada — langganan hidup di
+# database kita, Shopify hanya menerima order jadi. Jangan menambahkannya.
+scopes = "write_customers,write_orders,write_draft_orders,read_products"
+
+[webhooks]
+api_version = "2026-10"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/shopify"
+  topics = [ "app/uninstalled", "app/scopes_update" ]
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+
+[auth]
+redirect_urls = [ "https://shopify.dev/apps/default-app-home/api/auth" ]
+
+[build]
+automatically_update_urls_on_dev = true

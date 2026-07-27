@@ -1,0 +1,37 @@
+# Deploy Fly.io — web/worker split (STRUCTURE.md §3).
+app            = "treelogy-subscriptions"
+primary_region = "sin"                  # dekat Xendit & pelanggan ID — tidak bisa diubah belakangan
+
+[build]
+  dockerfile = "Dockerfile"
+
+[processes]
+  web    = "npm run docker-start"
+  worker = "npm run worker"
+
+[http_service]
+  internal_port        = 3000
+  force_https          = true
+  processes            = ["web"]        # worker tidak menerima traffic
+  auto_start_machines  = true
+  # "off", bukan "suspend": suspend punya masalah clock-skew — hal terakhir yang
+  # kamu mau di penjadwal penagihan. Webhook juga tidak sabar cold start.
+  auto_stop_machines   = "off"
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type       = "requests"
+    soft_limit = 200
+
+[[vm]]
+  processes = ["web"]
+  size      = "shared-cpu-1x"
+  memory    = "512mb"
+
+[[vm]]
+  processes = ["worker"]
+  size      = "shared-cpu-1x"
+  memory    = "512mb"
+
+# Skala: fly scale count web=2 worker=1
+# Worker JANGAN lebih dari 1 sampai FOR UPDATE SKIP LOCKED terbukti di staging.

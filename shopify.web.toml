@@ -1,0 +1,7 @@
+name = "React Router"
+roles = ["frontend", "backend"]
+webhooks_path = "/webhooks/shopify"
+
+[commands]
+predev = "npm run setup"
+dev = "npx react-router dev"
