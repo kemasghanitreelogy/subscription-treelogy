@@ -1,3 +1,7 @@
+/** @jsxImportSource preact */
+// PENTING: pragma di atas wajib. Root repo memuat React 18 (admin app), dan
+// tanpa pragma bundler meng-compile JSX ke runtime React — Preact lalu
+// merender kosong TANPA error (gejala: "render selesai, body children: 0").
 // Halaman penuh "Langganan" di akun pelanggan — Subscription management UI.
 // Komponen Polaris s-* saja (§6.4). Aksi utama INLINE (skip/jeda/lanjut) tanpa
 // pindah halaman; urutan deflect §7.6: Skip paling menonjol, Batalkan hanya
