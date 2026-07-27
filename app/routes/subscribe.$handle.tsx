@@ -3,7 +3,7 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { useFetcher, useLoaderData } from "react-router";
 import { getProductByHandle } from "../services/shopify-order.server";
-import { getSettings } from "../services/settings.server";
+import { getSettings, productSubscribable } from "../services/settings.server";
 import { pooledDb } from "../db/client.server";
 import { assertSubscribeAccess } from "../services/launch-gate.server";
 
@@ -16,6 +16,9 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const product = await getProductByHandle(params.handle!);
   if (!product) throw new Response("Produk tidak ditemukan", { status: 404 });
   const settings = await getSettings(pooledDb());
+  if (!productSubscribable(settings, product.id)) {
+    throw new Response("Produk tidak tersedia untuk langganan", { status: 404 });
+  }
   return { product, plans: settings.plans.filter((p) => p.enabled), previewKey };
 };
 

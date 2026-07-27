@@ -8,7 +8,7 @@ import { idempotencyKey, todayWIB, totalAmountIdr } from "../services/schedule.s
 import { createPaymentSession } from "../services/xendit.server";
 import { findCustomerGidByEmail, getVariant } from "../services/shopify-order.server";
 import { logEvent } from "../services/subscription-lifecycle.server";
-import { discountedUnitIdr, getSettings } from "../services/settings.server";
+import { discountedUnitIdr, getSettings, productSubscribable } from "../services/settings.server";
 import { assertSubscribeAccessForm } from "../services/launch-gate.server";
 
 const ALLOWED_METHODS = new Set(["card", "ovo", "dana", "gopay", "shopeepay"]);
@@ -49,6 +49,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   const variant = await getVariant(variantGid);
   if (!variant) return Response.json({ error: "Varian tidak ditemukan" }, { status: 400 });
+  if (!productSubscribable(settings, variant.product?.id)) {
+    return Response.json({ error: "Produk ini tidak tersedia untuk langganan" }, { status: 400 });
+  }
 
   // Harga Shopify dalam desimal string ("586500.00") — IDR tidak berdesimal.
   // Diskon plan diterapkan di server; client tidak pernah menentukan harga.

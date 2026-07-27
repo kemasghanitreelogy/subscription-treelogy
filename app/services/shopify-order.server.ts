@@ -128,7 +128,7 @@ export async function getVariant(variantGid: string) {
         id
         title
         price
-        product { title handle }
+        product { id title handle }
       }
     }`,
     { variables: { id: variantGid } },

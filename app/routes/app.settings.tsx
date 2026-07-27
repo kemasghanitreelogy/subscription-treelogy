@@ -7,7 +7,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate, STORE_NAME } from "../shopify.server";
 import { pooledDb } from "../db/client.server";
-import { getManagementUrl, saveManagementUrl } from "../services/settings.server";
+import { getManagementUrl, getSettings, saveManagementUrl, saveSettings } from "../services/settings.server";
 
 // uid theme app extension + handle block — untuk deep link "tambah block" di editor
 const THEME_EXT_UID = "277ae083-dfcd-a386-798b-084e9161d6ad95ef2b0b";
@@ -16,10 +16,11 @@ const BLOCK_HANDLE = "subscription_box";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
   const db = pooledDb();
-  const [hb, unprocessed, managementUrl] = await Promise.all([
+  const [hb, unprocessed, managementUrl, settings] = await Promise.all([
     db.query("select last_tick_at from worker_heartbeat where worker_name = 'worker'"),
     db.query("select count(*)::int as n from webhook_events where processed_at is null"),
     getManagementUrl(db),
+    getSettings(db),
   ]);
   const heartbeatAgeMin = hb.rows.length
     ? Math.round((Date.now() - new Date(hb.rows[0].last_tick_at).getTime()) / 60000)
@@ -30,6 +31,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     appUrl: process.env.SHOPIFY_APP_URL || "",
     storeHandle,
     managementUrl,
+    notifications: settings.notifications,
     storefrontLive: process.env.STOREFRONT_SUBSCRIBE_ENABLED === "true",
     checks: {
       worker: heartbeatAgeMin !== null && heartbeatAgeMin <= 15,
@@ -44,9 +46,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   await authenticate.admin(request);
   const form = await request.formData();
+  const intent = String(form.get("intent") ?? "management_url");
   try {
+    if (intent === "notifications") {
+      await saveSettings(pooledDb(), {
+        notifications: {
+          welcome: form.get("n_welcome") === "on",
+          charge_succeeded: form.get("n_charge_succeeded") === "on",
+          dunning: form.get("n_dunning") === "on",
+          auto_paused: form.get("n_auto_paused") === "on",
+          token_expiring: form.get("n_token_expiring") === "on",
+        },
+      });
+      return Response.json({ ok: true, intent });
+    }
     await saveManagementUrl(pooledDb(), String(form.get("managementUrl") ?? "").trim());
-    return Response.json({ ok: true });
+    return Response.json({ ok: true, intent });
   } catch (err) {
     return Response.json({ error: err instanceof Error ? err.message : "Gagal" }, { status: 400 });
   }
@@ -65,7 +80,7 @@ function Row({ label, description, children }: { label: string; description?: st
 }
 
 export default function Settings() {
-  const { appUrl, storeHandle, managementUrl, storefrontLive, checks } = useLoaderData<typeof loader>();
+  const { appUrl, storeHandle, managementUrl, notifications, storefrontLive, checks } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<{ ok?: boolean; error?: string }>();
   const shopify = useAppBridge();
   const busy = fetcher.state !== "idle";
@@ -183,13 +198,24 @@ export default function Settings() {
                   )}
                 </s-stack>
                 <s-paragraph>
-                  App mengirim event ke Klaviyo; kamu mengatur isi pesan & kanal (WA/email) di flow
-                  Klaviyo untuk event: <s-text type="strong">Subscription Created</s-text>,{" "}
-                  <s-text type="strong">Upcoming Charge</s-text> (H-3, berisi link 1-klik Skip/Jeda),{" "}
-                  <s-text type="strong">Charge Succeeded</s-text>, <s-text type="strong">Charge Failed</s-text>,{" "}
-                  <s-text type="strong">Subscription Paused/Cancelled</s-text>,{" "}
-                  <s-text type="strong">Token Expiring</s-text>, <s-text type="strong">Portal Link Requested</s-text>.
+                  Pilih notifikasi mana yang dikirim ke pelanggan (isi pesan & kanal WA/email
+                  diatur di flow Klaviyo).
                 </s-paragraph>
+                <fetcher.Form method="post">
+                  <input type="hidden" name="intent" value="notifications" />
+                  <s-stack direction="block" gap="small-200">
+                    <s-stack direction="inline" gap="small-200" alignItems="center">
+                      <s-switch label="Pengingat H-3 sebelum tagihan" name="n_precharge" checked disabled></s-switch>
+                      <s-badge tone="info">wajib — janji legal, tidak bisa dimatikan</s-badge>
+                    </s-stack>
+                    <s-switch label="Selamat datang (Subscription Created)" name="n_welcome" checked={notifications.welcome}></s-switch>
+                    <s-switch label="Tagihan berhasil (Charge Succeeded)" name="n_charge_succeeded" checked={notifications.charge_succeeded}></s-switch>
+                    <s-switch label="Tagihan gagal / dunning (Charge Failed)" name="n_dunning" checked={notifications.dunning}></s-switch>
+                    <s-switch label="Dijeda otomatis (Subscription Paused)" name="n_auto_paused" checked={notifications.auto_paused}></s-switch>
+                    <s-switch label="Metode bayar akan kedaluwarsa (Token Expiring)" name="n_token_expiring" checked={notifications.token_expiring}></s-switch>
+                    <s-button type="submit" disabled={busy} loading={busy}>Simpan notifikasi</s-button>
+                  </s-stack>
+                </fetcher.Form>
                 <s-button href="https://www.klaviyo.com/dashboard" target="_blank">Buka Klaviyo</s-button>
               </s-stack>
             </s-box>

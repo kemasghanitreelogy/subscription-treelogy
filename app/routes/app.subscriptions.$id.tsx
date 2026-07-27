@@ -8,7 +8,9 @@ import { authenticate } from "../shopify.server";
 import { pooledDb } from "../db/client.server";
 import {
   cancelSubscription,
+  changeFrequency,
   pauseSubscription,
+  rescheduleSubscription,
   resumeSubscription,
   skipCycle,
   type SubscriptionRow,
@@ -69,6 +71,18 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       case "cancel":
         await cancelSubscription(db, sub, String(form.get("reason") ?? "admin") || "admin", actor);
         return Response.json({ ok: true, message: "Langganan dibatalkan" });
+      case "reschedule": {
+        const d = await rescheduleSubscription(db, sub, String(form.get("date") ?? ""), actor);
+        return Response.json({ ok: true, message: `Tagihan berikutnya digeser ke ${d}` });
+      }
+      case "frequency": {
+        const days = Number(form.get("frequencyDays") ?? 0);
+        if (![30, 60, 90].includes(days)) {
+          return Response.json({ error: "Frekuensi harus 30/60/90 hari" }, { status: 400 });
+        }
+        const d = await changeFrequency(db, sub, days, actor);
+        return Response.json({ ok: true, message: `Frekuensi jadi tiap ${days} hari — tagihan berikutnya ${d}` });
+      }
       default:
         return Response.json({ error: "Aksi tidak dikenal" }, { status: 400 });
     }
@@ -136,6 +150,49 @@ export default function SubscriptionDetail() {
           </s-box>
         </s-grid>
       </s-section>
+
+      {sub.status === "active" && (
+        <s-section heading="Ubah jadwal">
+          <s-grid gridTemplateColumns="1fr 1fr" gap="base">
+            <s-stack direction="block" gap="small-200">
+              <s-date-field
+                id="reschedule-date"
+                label="Geser tagihan berikutnya ke"
+                name="date"
+                value={sub.next_charge_date ?? ""}
+                details="Minimal 3 hari dari hari ini — jaminan pengingat H-3"
+              ></s-date-field>
+              <s-button
+                disabled={busy}
+                onClick={() =>
+                  act("reschedule", {
+                    date: (document.getElementById("reschedule-date") as HTMLInputElement).value,
+                  })
+                }
+              >
+                Geser tanggal
+              </s-button>
+            </s-stack>
+            <s-stack direction="block" gap="small-200">
+              <s-select id="frequency-select" label="Frekuensi" value={String(sub.frequency_days)}>
+                <s-option value="30">Tiap 30 hari</s-option>
+                <s-option value="60">Tiap 60 hari</s-option>
+                <s-option value="90">Tiap 90 hari</s-option>
+              </s-select>
+              <s-button
+                disabled={busy}
+                onClick={() =>
+                  act("frequency", {
+                    frequencyDays: (document.getElementById("frequency-select") as HTMLSelectElement).value,
+                  })
+                }
+              >
+                Ubah frekuensi
+              </s-button>
+            </s-stack>
+          </s-grid>
+        </s-section>
+      )}
 
       <s-section heading="Riwayat tagihan" padding="none">
         <s-table variant="auto">

@@ -13,6 +13,7 @@ import {
   todayWIB,
 } from "./schedule.server";
 import { classifyFailure } from "./xendit.server";
+import { getSettings, notificationEnabled } from "./settings.server";
 import { createSubscriptionOrder } from "./shopify-order.server";
 import { emitKlaviyoEvent } from "./klaviyo.server";
 
@@ -217,6 +218,7 @@ async function autoPause(
 /**
  * Kirim notifikasi tepat-sekali: klaim baris notifications dulu (unique index),
  * baru emit. Kalau emit gagal, klaim dilepas supaya dicoba lagi.
+ * Menghormati toggle merchant — KECUALI precharge_h3 yang selalu terkirim 🔒.
  */
 export async function notifySafe(
   db: pg.Pool,
@@ -226,6 +228,8 @@ export async function notifySafe(
   send: () => Promise<void>,
   channel: string = "both",
 ): Promise<boolean> {
+  const settings = await getSettings(db);
+  if (!notificationEnabled(settings, kind)) return false;
   const { rows } = await db.query(
     `insert into notifications (subscription_id, charge_cycle, kind, channel)
      values ($1, $2, $3, $4)
@@ -315,6 +319,24 @@ export async function changeFrequency(
     next_charge_date: newDate,
   });
   return newDate;
+}
+
+/** Reschedule tanggal tagihan berikutnya — wajib lolos jaminan H-3 🔒. */
+export async function rescheduleSubscription(
+  db: pg.Pool,
+  sub: SubscriptionRow,
+  newDateWIB: string,
+  actor: string,
+): Promise<string> {
+  if (sub.status !== "active") throw new Error("Reschedule hanya untuk langganan aktif");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(newDateWIB)) throw new Error("Format tanggal tidak sah");
+  assertH3Safe(newDateWIB);
+  await db.query(
+    "update subscriptions set next_charge_date = $1, next_attempt_at = $2 where id = $3",
+    [newDateWIB, atHourWIB(newDateWIB), sub.id],
+  );
+  await logEvent(db, sub.id, "rescheduled", actor, { from: sub.next_charge_date, to: newDateWIB });
+  return newDateWIB;
 }
 
 export async function cancelSubscription(
