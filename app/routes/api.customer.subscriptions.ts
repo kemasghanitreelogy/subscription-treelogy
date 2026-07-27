@@ -50,7 +50,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const db = pooledDb();
   const { rows } = await db.query(
     `select id, status, variant_gid, quantity, unit_amount_idr, shipping_amount_idr,
-            frequency_days, next_charge_date
+            frequency_days, next_charge_date, xendit_token_id
        from subscriptions
       where shopify_customer_gid = $1 and status <> 'cancelled'
       order by created_at desc`,
@@ -65,6 +65,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       productTitle: `Langganan tiap ${s.frequency_days} hari`,
       frequencyDays: s.frequency_days,
       nextChargeDate: s.next_charge_date,
+      hasPaymentMethod: Boolean(s.xendit_token_id),
       amountLabel: `Rp${(s.unit_amount_idr * s.quantity + s.shipping_amount_idr).toLocaleString("id-ID")}`,
       portalUrl: `${appUrl}/portal/${await issuePortalToken(db, s.id, "full")}`,
     })),
