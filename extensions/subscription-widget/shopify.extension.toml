@@ -1,0 +1,7 @@
+api_version = "2025-10"
+
+[[extensions]]
+name = "Treelogy Subscription Widget"
+handle = "subscription-widget"
+uid = "277ae083-dfcd-a386-798b-084e9161d6ad95ef2b0b"
+type = "theme"

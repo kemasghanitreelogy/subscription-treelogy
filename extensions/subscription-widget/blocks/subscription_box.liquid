@@ -1,0 +1,144 @@
+<div class="tsub-box" style="--tsub-accent: {{ block.settings.accent_color }}" {{ block.shopify_attributes }}>
+  <p class="tsub-heading">
+    {{ block.settings.heading }}
+    {% if block.settings.badge_text != blank %}
+      <span class="tsub-badge">{{ block.settings.badge_text }}</span>
+    {% endif %}
+  </p>
+  {% if block.settings.subheading != blank %}
+    <p class="tsub-sub">{{ block.settings.subheading }}</p>
+  {% endif %}
+
+  <div class="tsub-plans">
+    {% if block.settings.show_plan_30 %}
+      <div class="tsub-plan"><span>Tiap 30 hari</span><strong>Hemat {{ block.settings.discount_30 }}%</strong></div>
+    {% endif %}
+    {% if block.settings.show_plan_60 %}
+      <div class="tsub-plan"><span>Tiap 60 hari</span><strong>Hemat {{ block.settings.discount_60 }}%</strong></div>
+    {% endif %}
+    {% if block.settings.show_plan_90 %}
+      <div class="tsub-plan"><span>Tiap 90 hari</span><strong>Hemat {{ block.settings.discount_90 }}%</strong></div>
+    {% endif %}
+  </div>
+
+  {% if block.settings.benefits != blank %}
+    <ul class="tsub-benefits">
+      {% assign benefit_lines = block.settings.benefits | newline_to_br | split: '<br />' %}
+      {% for line in benefit_lines %}
+        {% assign trimmed = line | strip %}
+        {% if trimmed != blank %}
+          <li>{{ trimmed }}</li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <a class="tsub-cta" href="{{ block.settings.app_url }}/subscribe/{{ product.handle }}">
+    {{ block.settings.button_label }}
+  </a>
+  <span class="tsub-note">{{ block.settings.note_text }}</span>
+</div>
+
+{% schema %}
+{
+  "name": "Kotak Langganan Treelogy",
+  "target": "section",
+  "stylesheet": "subscription-box.css",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Judul",
+      "default": "Langganan & Hemat"
+    },
+    {
+      "type": "text",
+      "id": "badge_text",
+      "label": "Teks badge",
+      "default": "PALING HEMAT"
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "Subjudul",
+      "default": "Dikirim otomatis sesuai jadwalmu. Bisa lewati, jeda, atau batal kapan saja."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_plan_30",
+      "label": "Tampilkan plan 30 hari",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "discount_30",
+      "label": "Diskon plan 30 hari (%)",
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "default": 10
+    },
+    {
+      "type": "checkbox",
+      "id": "show_plan_60",
+      "label": "Tampilkan plan 60 hari",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "discount_60",
+      "label": "Diskon plan 60 hari (%)",
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "default": 12
+    },
+    {
+      "type": "checkbox",
+      "id": "show_plan_90",
+      "label": "Tampilkan plan 90 hari",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "discount_90",
+      "label": "Diskon plan 90 hari (%)",
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "default": 15
+    },
+    {
+      "type": "textarea",
+      "id": "benefits",
+      "label": "Daftar manfaat (satu per baris)",
+      "default": "Pengingat WA 3 hari sebelum tiap tagihan\nGratis lewati atau jeda kapan saja\nBayar pakai DANA, OVO, GoPay, ShopeePay, atau kartu"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Teks tombol",
+      "default": "Mulai Langganan"
+    },
+    {
+      "type": "text",
+      "id": "note_text",
+      "label": "Catatan di bawah tombol",
+      "default": "Tanpa komitmen — batal kapan saja dengan 2 klik"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Warna aksen",
+      "default": "#2f6f4f"
+    },
+    {
+      "type": "text",
+      "id": "app_url",
+      "label": "URL app langganan",
+      "info": "Biarkan default kecuali URL app berubah",
+      "default": "https://treelogy-subscriptions.fly.dev"
+    }
+  ]
+}
+{% endschema %}

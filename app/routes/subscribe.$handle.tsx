@@ -3,6 +3,8 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { useFetcher, useLoaderData } from "react-router";
 import { getProductByHandle } from "../services/shopify-order.server";
+import { getSettings } from "../services/settings.server";
+import { pooledDb } from "../db/client.server";
 
 const CONSENT_TEXT =
   "Saya menyetujui pendebetan otomatis sesuai frekuensi yang saya pilih sampai saya menghentikannya. " +
@@ -11,13 +13,14 @@ const CONSENT_TEXT =
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   const product = await getProductByHandle(params.handle!);
   if (!product) throw new Response("Produk tidak ditemukan", { status: 404 });
-  return { product };
+  const settings = await getSettings(pooledDb());
+  return { product, plans: settings.plans.filter((p) => p.enabled) };
 };
 
 const rupiah = (n: number) => `Rp${Number(n).toLocaleString("id-ID")}`;
 
 export default function Subscribe() {
-  const { product } = useLoaderData<typeof loader>();
+  const { product, plans } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<{ paymentUrl?: string; error?: string }>();
   const variants = product.variants.edges.map((e: { node: { id: string; title: string; price: string; availableForSale: boolean } }) => e.node);
 
@@ -44,10 +47,12 @@ export default function Subscribe() {
 
         <label>
           Kirim tiap
-          <select name="frequencyDays" defaultValue="30" style={{ display: "block", padding: 8, width: "100%" }}>
-            <option value="30">30 hari</option>
-            <option value="60">60 hari</option>
-            <option value="90">90 hari</option>
+          <select name="frequencyDays" defaultValue={String(plans[0]?.days ?? 30)} style={{ display: "block", padding: 8, width: "100%" }}>
+            {plans.map((p) => (
+              <option key={p.days} value={p.days}>
+                {p.label}{p.discountPct > 0 ? ` — hemat ${p.discountPct}%` : ""}
+              </option>
+            ))}
           </select>
         </label>
 

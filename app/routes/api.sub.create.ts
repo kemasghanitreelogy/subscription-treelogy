@@ -8,8 +8,8 @@ import { idempotencyKey, todayWIB, totalAmountIdr } from "../services/schedule.s
 import { createPaymentSession } from "../services/xendit.server";
 import { findCustomerGidByEmail, getVariant } from "../services/shopify-order.server";
 import { logEvent } from "../services/subscription-lifecycle.server";
+import { discountedUnitIdr, getSettings } from "../services/settings.server";
 
-const ALLOWED_FREQUENCIES = new Set([30, 60, 90]);
 const ALLOWED_METHODS = new Set(["card", "ovo", "dana", "gopay", "shopeepay"]);
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -31,8 +31,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return Response.json({ error: "Varian tidak sah" }, { status: 400 });
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10)
     return Response.json({ error: "Jumlah tidak sah" }, { status: 400 });
-  if (!ALLOWED_FREQUENCIES.has(frequencyDays))
-    return Response.json({ error: "Frekuensi tidak sah" }, { status: 400 });
+  const settings = await getSettings(pooledDb());
+  const plan = settings.plans.find((p) => p.enabled && p.days === frequencyDays);
+  if (!plan) return Response.json({ error: "Frekuensi tidak sah" }, { status: 400 });
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))
     return Response.json({ error: "Email tidak sah" }, { status: 400 });
   if (phone && !/^\+[1-9]\d{6,14}$/.test(phone))
@@ -48,8 +49,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (!variant) return Response.json({ error: "Varian tidak ditemukan" }, { status: 400 });
 
   // Harga Shopify dalam desimal string ("586500.00") — IDR tidak berdesimal.
-  const unitAmountIdr = Math.round(Number(variant.price));
-  const shippingAmountIdr = Number(process.env.SHIPPING_AMOUNT_IDR || 0);
+  // Diskon plan diterapkan di server; client tidak pernah menentukan harga.
+  const baseUnitIdr = Math.round(Number(variant.price));
+  const unitAmountIdr = discountedUnitIdr(baseUnitIdr, plan);
+  const shippingAmountIdr = settings.shippingAmountIdr;
   const amountIdr = totalAmountIdr(unitAmountIdr, quantity, shippingAmountIdr);
 
   const db = pooledDb();
