@@ -14,5 +14,5 @@ uid = "2ca7dab4-181a-97ca-a6b6-033d64a6b18c44ee21b5"
   target = "customer-account.page.render"
 
   [extensions.capabilities]
-  # fetch ke backend app (sub.treelogy.com) dengan session token
+  # fetch ke backend app (treelogy-subscriptions.fly.dev) dengan session token
   network_access = true

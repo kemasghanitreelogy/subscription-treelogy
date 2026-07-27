@@ -111,6 +111,26 @@ export default function Settings() {
         </s-button>
       </s-section>
 
+      <s-section heading="URL manajemen langganan">
+        <s-paragraph>
+          Halaman <s-text type="strong">"Langganan"</s-text> (kelola langganan pelanggan: lewati,
+          jeda, lanjut, batal) sudah terpasang otomatis di akun pelanggan sebagai halaman penuh.
+          Tambahkan ke menu akun pelanggan lewat editor — dari sana URL halamannya juga bisa
+          disalin untuk dipasang di navigasi toko atau email.
+        </s-paragraph>
+        <s-ordered-list>
+          <s-list-item>Buka editor Checkout & akun pelanggan</s-list-item>
+          <s-list-item>Pilih tampilan Customer accounts → Menu</s-list-item>
+          <s-list-item>Add menu item → pilih halaman "Treelogy Subscriptions"</s-list-item>
+        </s-ordered-list>
+        <s-button
+          variant="primary"
+          href={`https://admin.shopify.com/store/${storeName.replace(".myshopify.com", "")}/settings/checkout/editor`}
+        >
+          Buka editor akun pelanggan
+        </s-button>
+      </s-section>
+
       <s-section heading="URL penting">
         <s-unordered-list>
           <s-list-item>

@@ -6,14 +6,15 @@ import { pooledDb } from "../db/client.server";
 import { authorizePortalAction } from "../services/portal-auth.server";
 import { createSaveSession } from "../services/xendit.server";
 import { logEvent } from "../services/subscription-lifecycle.server";
+import { corsJson } from "../services/cors.server";
 
 export const action = async ({ request, params }: ActionFunctionArgs) => {
-  if (request.method !== "POST") return Response.json({ error: "method" }, { status: 405 });
+  if (request.method !== "POST") return corsJson({ error: "method" }, { status: 405 });
   const db = pooledDb();
   const sub = await authorizePortalAction(db, await request.formData(), params.id!, "relink");
   if (sub instanceof Response) return sub;
   if (sub.status === "cancelled") {
-    return Response.json({ error: "Langganan sudah dibatalkan" }, { status: 400 });
+    return corsJson({ error: "Langganan sudah dibatalkan" }, { status: 400 });
   }
 
   const appUrl = process.env.SHOPIFY_APP_URL || "";
@@ -32,5 +33,5 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   await logEvent(db, sub.id, "relink_started", "customer", {
     payment_session_id: session.payment_session_id,
   });
-  return Response.json({ ok: true, paymentUrl: session.payment_link_url });
+  return corsJson({ ok: true, paymentUrl: session.payment_link_url });
 };
